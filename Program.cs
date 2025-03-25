@@ -15,23 +15,23 @@ class SortingBenchmark
         int[] sizes = { 10, 1000, 10000, 1000000, 100000000 };
 
         // Методи сортування для порівняння
-        string[] methods = { "Insertion Sort", "Bubble Sort", "Quick Sort", "Merge Sort", "Count Sort", "Radix Sort", "Bucket Sort", "Timsort", "Binary Tree Sort" };
+        string[] methods = { "Insertion Sort", "Bubble Sort", "Quick Sort", "Merge Sort", "Count Sort", "Radix Sort", "Busket Sort", "Timsort", "Binary Tree Sort" };
 
         // Порівняння випадкових масивів з великого інтервалу
         Console.WriteLine("Порівняння часу сортування (в мілісекундах) для випадкових масивів з великого інтервалу\n");
         CompareSortingTimes(sizes, methods, 1, 1000000);
 
-        // Порівняння випадкових масивів з малого інтервалу
-        Console.WriteLine("Порівняння часу сортування (в мілісекундах) для випадкових масивів з малого інтервалу\n");
-        CompareSortingTimes(sizes, methods, 1, 10);
+        //// Порівняння випадкових масивів з малого інтервалу
+        //Console.WriteLine("Порівняння часу сортування (в мілісекундах) для випадкових масивів з малого інтервалу\n");
+        //CompareSortingTimes(sizes, methods, 1, 10);
 
-        // Порівняння масивів, відсортованих за спаданням, з великого інтервалу
-        Console.WriteLine("Порівняння часу сортування (в мілісекундах) для відсортованих за спаданням масивів з великого інтервалу\n");
-        CompareSortingTimes(sizes, methods, 1, 1000000, true);
+        ////Порівняння масивів, відсортованих за спаданням, з великого інтервалу
+        //Console.WriteLine("Порівняння часу сортування (в мілісекундах) для відсортованих за спаданням масивів з великого інтервалу\n");
+        //CompareSortingTimes(sizes, methods, 1, 1000000, true);
 
-        // Порівняння масивів, відсортованих за спаданням, з малого інтервалу
-        Console.WriteLine("Порівняння часу сортування (в мілісекундах) для відсортованих за спаданням масивів з малого інтервалу\n");
-        CompareSortingTimes(sizes, methods, 1, 10, true);
+        //// Порівняння масивів, відсортованих за спаданням, з малого інтервалу
+        //Console.WriteLine("Порівняння часу сортування (в мілісекундах) для відсортованих за спаданням масивів з малого інтервалу\n");
+        //CompareSortingTimes(sizes, methods, 1, 10, true);
     }
 
     // Функція порівняння часу сортування для різних методів
@@ -56,7 +56,7 @@ class SortingBenchmark
                     Array.Reverse(array);
                 }
 
-                long elapsedMilliseconds = SortWithTimeout(method, array, TimeSpan.FromSeconds(60));
+                long elapsedMilliseconds = SortWithTimeout(method, array, TimeSpan.FromSeconds(10));
 
                 // Вивід часу сортування
                 Console.Write("{0,10}", elapsedMilliseconds >= 0 ? elapsedMilliseconds : "Timeout");
@@ -88,12 +88,12 @@ class SortingBenchmark
             else
             {
                 cancellationTokenSource.Cancel();
-                return -1; // Час вийшов
+                return -1; // Час вичерпано
             }
         }
         catch (AggregateException)
         {
-            return -1; // Час вийшов
+            return -1; // Час вичерпано
         }
     }
 
@@ -121,7 +121,7 @@ class SortingBenchmark
                 BubbleSort(array);
                 break;
             case "Quick Sort":
-                QuickSort(array, 0, array.Length - 1);
+                QuickSort(array);
                 break;
             case "Merge Sort":
                 MergeSort(array, 0, array.Length - 1);
@@ -132,7 +132,7 @@ class SortingBenchmark
             case "Radix Sort":
                 RadixSort(array);
                 break;
-            case "Bucket Sort":
+            case "Busket Sort":
                 BusketSort(array);
                 break;
             case "Timsort":
@@ -175,13 +175,32 @@ class SortingBenchmark
     }
 
     // Метод швидкого сортування
-    static void QuickSort(int[] array, int low, int high)
+    static void QuickSort(int[] array)
     {
-        if (low < high)
+        int[] stack = new int[array.Length];
+        int top = -1;
+
+        stack[++top] = 0;
+        stack[++top] = array.Length - 1;
+
+        while (top >= 0)
         {
-            int pi = Partition(array, low, high);
-            QuickSort(array, low, pi - 1);
-            QuickSort(array, pi + 1, high);
+            int high = stack[top--];
+            int low = stack[top--];
+
+            int p = Partition(array, low, high);
+
+            if (p - 1 > low)
+            {
+                stack[++top] = low;
+                stack[++top] = p - 1;
+            }
+
+            if (p + 1 < high)
+            {
+                stack[++top] = p + 1;
+                stack[++top] = high;
+            }
         }
     }
 
@@ -330,7 +349,7 @@ class SortingBenchmark
         }
     }
 
-    // Метод сортування кошиками (Bucket Sort)
+    // Метод Busket Sort
     static void BusketSort(int[] array)
     {
         if (array.Length == 0)
@@ -347,36 +366,37 @@ class SortingBenchmark
                 maxValue = array[i];
         }
 
-        List<int>[] bucket = new List<int>[maxValue - minValue + 1];
+        int bucketCount = (maxValue - minValue) / 5; // Зміна кількості кошиків
+        List<int>[] buckets = new List<int>[bucketCount];
 
-        for (int i = 0; i < bucket.Length; i++)
+        for (int i = 0; i < buckets.Length; i++)
         {
-            bucket[i] = new List<int>();
+            buckets[i] = new List<int>();
         }
 
         for (int i = 0; i < array.Length; i++)
         {
-            bucket[array[i] - minValue].Add(array[i]);
+            int bucketIndex = (array[i] - minValue) / 6; // Зміна індексу кошика
+            buckets[bucketIndex].Add(array[i]);
         }
 
         int k = 0;
-        for (int i = 0; i < bucket.Length; i++)
+        for (int i = 0; i < buckets.Length; i++)
         {
-            for (int j = 0; j < bucket[i].Count; j++)
+            foreach (int value in buckets[i])
             {
-                array[k] = bucket[i][j];
-                k++;
+                array[k++] = value;
             }
         }
     }
 
-    // Метод сортування Timsort
+    // Метод Timsort
     static void Timsort(int[] array)
     {
         Array.Sort(array);
     }
 
-    // Метод сортування бінарним деревом
+    // Метод Binary Tree Sort    
     static void BinaryTreeSort(int[] array)
     {
         if (array.Length == 0)
